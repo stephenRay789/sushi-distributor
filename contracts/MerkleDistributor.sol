@@ -39,6 +39,8 @@ contract MerkleDistributor is IMerkleDistributor, Ownable {
     function claim(uint256 index, address account, uint256 amount, bytes32[] calldata merkleProof) external override {
         require(!frozen, 'MerkleDistributor: Claiming is frozen.');
         require(!isClaimed(index), 'MerkleDistributor: Drop already claimed.');
+        require(msg.sender == account, 'MerkleDistributor: Claimer != Account');
+        require(msg.sender == tx.origin, 'MerkleDistributor: Must use EOA');
 
         // Verify the merkle proof.
         bytes32 node = keccak256(abi.encodePacked(index, account, amount));

@@ -90,12 +90,15 @@ describe('MerkleDistributor', () => {
       })
 
       it('successful claim', async () => {
+        let distributorFromClaimer = distributor.connect(wallets.find(wallet => wallet.address == wallet0.address))
         const proof0 = tree.getProof(0, wallet0.address, BigNumber.from(100))
-        await expect(distributor.claim(0, wallet0.address, 100, proof0, overrides))
+        await expect(distributorFromClaimer.claim(0, wallet0.address, 100, proof0, overrides))
           .to.emit(distributor, 'Claimed')
           .withArgs(0, 100, wallet0.address, 0)
+        
+        distributorFromClaimer = distributor.connect(wallets.find(wallet => wallet.address == wallet1.address))
         const proof1 = tree.getProof(1, wallet1.address, BigNumber.from(101))
-        await expect(distributor.claim(1, wallet1.address, 101, proof1, overrides))
+        await expect(distributorFromClaimer.claim(1, wallet1.address, 101, proof1, overrides))
           .to.emit(distributor, 'Claimed')
           .withArgs(1, 101, wallet1.address, 0)
       })
@@ -133,14 +136,17 @@ describe('MerkleDistributor', () => {
       })
 
       it('cannot claim more than once: 0 and then 1', async () => {
-        await distributor.claim(
+        let distributorFromClaimer = distributor.connect(wallets.find(wallet => wallet.address == wallet0.address))
+        await distributorFromClaimer.claim(
           0,
           wallet0.address,
           100,
           tree.getProof(0, wallet0.address, BigNumber.from(100)),
           overrides
         )
-        await distributor.claim(
+
+        distributorFromClaimer = distributor.connect(wallets.find(wallet => wallet.address == wallet1.address))
+        await distributorFromClaimer.claim(
           1,
           wallet1.address,
           101,
@@ -154,13 +160,16 @@ describe('MerkleDistributor', () => {
       })
 
       it('cannot claim more than once: 1 and then 0', async () => {
-        await distributor.claim(
+        let distributorFromClaimer = distributor.connect(wallets.find(wallet => wallet.address == wallet1.address))
+        await distributorFromClaimer.claim(
           1,
           wallet1.address,
           101,
           tree.getProof(1, wallet1.address, BigNumber.from(101)),
           overrides
         )
+
+        distributorFromClaimer = distributor.connect(wallets.find(wallet => wallet.address == wallet0.address))
         await distributor.claim(
           0,
           wallet0.address,
@@ -175,8 +184,9 @@ describe('MerkleDistributor', () => {
       })
 
       it('cannot claim for address other than proof', async () => {
+        let distributorFromClaimer = distributor.connect(wallets.find(wallet => wallet.address == wallet1.address))
         const proof0 = tree.getProof(0, wallet0.address, BigNumber.from(100))
-        await expect(distributor.claim(1, wallet1.address, 101, proof0, overrides)).to.be.revertedWith(
+        await expect(distributorFromClaimer.claim(1, wallet1.address, 101, proof0, overrides)).to.be.revertedWith(
           'MerkleDistributor: Invalid proof.'
         )
       })
@@ -192,7 +202,7 @@ describe('MerkleDistributor', () => {
         const proof = tree.getProof(0, wallet0.address, BigNumber.from(100))
         const tx = await distributor.claim(0, wallet0.address, 100, proof, overrides)
         const receipt = await tx.wait()
-        expect(receipt.gasUsed).to.eq(83214)
+        expect(receipt.gasUsed).to.eq(83275)
       })
     })
     describe('larger tree', () => {
@@ -209,35 +219,41 @@ describe('MerkleDistributor', () => {
       })
 
       it('claim index 4', async () => {
+        const distributorFromClaimer = distributor.connect(wallets.find(wallet => wallet.address == wallets[4].address))
         const proof = tree.getProof(4, wallets[4].address, BigNumber.from(5))
-        await expect(distributor.claim(4, wallets[4].address, 5, proof, overrides))
+        await expect(distributorFromClaimer.claim(4, wallets[4].address, 5, proof, overrides))
           .to.emit(distributor, 'Claimed')
           .withArgs(4, 5, wallets[4].address, 0)
       })
 
       it('claim index 9', async () => {
+        const distributorFromClaimer = distributor.connect(wallets.find(wallet => wallet.address == wallets[9].address))
         const proof = tree.getProof(9, wallets[9].address, BigNumber.from(10))
-        await expect(distributor.claim(9, wallets[9].address, 10, proof, overrides))
+        await expect(distributorFromClaimer.claim(9, wallets[9].address, 10, proof, overrides))
           .to.emit(distributor, 'Claimed')
           .withArgs(9, 10, wallets[9].address, 0)
       })
 
       it('gas', async () => {
+        const distributorFromClaimer = distributor.connect(wallets.find(wallet => wallet.address == wallets[9].address))
         const proof = tree.getProof(9, wallets[9].address, BigNumber.from(10))
-        const tx = await distributor.claim(9, wallets[9].address, 10, proof, overrides)
+        const tx = await distributorFromClaimer.claim(9, wallets[9].address, 10, proof, overrides)
         const receipt = await tx.wait()
-        expect(receipt.gasUsed).to.eq(85708)
+        expect(receipt.gasUsed).to.eq(85769)
       })
 
       it('gas second down about 15k', async () => {
-        await distributor.claim(
+        let distributorFromClaimer = distributor.connect(wallets.find(wallet => wallet.address == wallets[0].address))
+        await distributorFromClaimer.claim(
           0,
           wallets[0].address,
           1,
           tree.getProof(0, wallets[0].address, BigNumber.from(1)),
           overrides
         )
-        const tx = await distributor.claim(
+        
+        distributorFromClaimer = distributor.connect(wallets.find(wallet => wallet.address == wallets[1].address))
+        const tx = await distributorFromClaimer.claim(
           1,
           wallets[1].address,
           2,
@@ -245,7 +261,7 @@ describe('MerkleDistributor', () => {
           overrides
         )
         const receipt = await tx.wait()
-        expect(receipt.gasUsed).to.eq(70688)
+        expect(receipt.gasUsed).to.eq(70749)
       })
     })
 
@@ -281,13 +297,13 @@ describe('MerkleDistributor', () => {
         const proof = tree.getProof(50000, wallet0.address, BigNumber.from(100))
         const tx = await distributor.claim(50000, wallet0.address, 100, proof, overrides)
         const receipt = await tx.wait()
-        expect(receipt.gasUsed).to.eq(96398)
+        expect(receipt.gasUsed).to.eq(96459)
       })
       it('gas deeper node', async () => {
         const proof = tree.getProof(90000, wallet0.address, BigNumber.from(100))
         const tx = await distributor.claim(90000, wallet0.address, 100, proof, overrides)
         const receipt = await tx.wait()
-        expect(receipt.gasUsed).to.eq(96334)
+        expect(receipt.gasUsed).to.eq(96395)
       })
       it('gas average random distribution', async () => {
         let total: BigNumber = BigNumber.from(0)
@@ -300,7 +316,7 @@ describe('MerkleDistributor', () => {
           count++
         }
         const average = total.div(count)
-        expect(average).to.eq(81823)
+        expect(average).to.eq(81884)
       })
       // this is what we gas golfed by packing the bitmap
       it('gas average first 25', async () => {
@@ -314,7 +330,7 @@ describe('MerkleDistributor', () => {
           count++
         }
         const average = total.div(count)
-        expect(average).to.eq(67572)
+        expect(average).to.eq(67633)
       })
 
       it('no double claims in random distribution', async () => {
@@ -439,11 +455,12 @@ describe('MerkleDistributor', () => {
 
     it('all claims work exactly once', async () => {
       for (let account in claims) {
+        const distributorFromClaimer = distributor.connect(wallets.find(wallet => wallet.address == account))
         const claim = claims[account]
-        await expect(distributor.claim(claim.index, account, claim.amount, claim.proof, overrides))
+        await expect(distributorFromClaimer.claim(claim.index, account, claim.amount, claim.proof, overrides))
           .to.emit(distributor, 'Claimed')
           .withArgs(claim.index, claim.amount, account, 0)
-        await expect(distributor.claim(claim.index, account, claim.amount, claim.proof, overrides)).to.be.revertedWith(
+        await expect(distributorFromClaimer.claim(claim.index, account, claim.amount, claim.proof, overrides)).to.be.revertedWith(
           'MerkleDistributor: Drop already claimed.'
         )
       }
